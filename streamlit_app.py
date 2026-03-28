@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from api import analyze_text 
+from service import process_single, process_batch
 
 st.set_page_config(page_title="Sentiment Analyzer", layout="wide")
 st.title("Sentiment Analysis Dashboard")
@@ -21,20 +21,13 @@ if mode == "Single text":
 
     with col1:
         if st.button("Проверить"):
-            if text.strip():
-                try:
-                    result = analyze_text(text)
-                    st.session_state.history.append({
-                        "text": text,
-                        "label": result[0]["label"],
-                        "score": result[0]["score"]
-                    })
-                    st.success("Анализ завершен!")
-                    st.json(result)
-                except Exception as e:
-                    st.error(f"Ошибка при запросе к API: {e}")
+            result = process_single(text)
+            if "error" in result:
+                st.error(result["error"])
             else:
-                st.error("Текст пуст")
+                st.session_state.history.append(result)
+                st.success("Анализ завершен!")
+                st.json(result)
 
     with col2:
         if st.button("Очистить историю"):
@@ -42,28 +35,16 @@ if mode == "Single text":
 
 
 else:
-    st.subheader("📂 Batch analysis")
+    st.subheader("Batch analysis")
     texts = st.text_area(
         "Введите несколько текстов (по одному на строку).",
         height=200
     )
 
     if st.button("Analyze batch"):
-        results = []
-        for t in texts.split("\n"):
-            if t.strip():
-                try:
-                    result = analyze_text(t)[0]
-                    results.append({
-                        "text": t,
-                        "label": result["label"],
-                        "score": result["score"]
-                    })
-                    st.session_state.history.append(results[-1])
-                except Exception as e:
-                    st.warning(f"Ошибка при анализе текста '{t}': {e}")
-
+        results = process_batch(texts)
         if results:
+            st.session_state.history.extend(results)
             df = pd.DataFrame(results)
             st.dataframe(df)
         else:

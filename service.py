@@ -1,4 +1,4 @@
-from api_client import analyze_text
+from api import analyze_text
 
 def process_single(text: str):
     """
